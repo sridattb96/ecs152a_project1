@@ -1,5 +1,5 @@
-# Anirudh Jagdish
-# Sridatt Bhamidipati
+# Anirudh Jagdish       (id: 914333546)
+# Sridatt Bhamidipati   (id: 998993083)
 # ECS 152A project, phase 1
 # 02/24/2017
 
@@ -14,6 +14,8 @@ from Event import Event
 import math
 import random
 
+
+
 def negative_exponential_dist_time_(rate):
     u = random.random()
     result = (-1 / rate) * math.log(1 - u)
@@ -25,12 +27,11 @@ def step(l, m, max):
     lam = l
     mu = m
     gel = []
-    bufferQ = []
     event_time = time + negative_exponential_dist_time_(lam)
     service_time = negative_exponential_dist_time_(mu)
     first_Event = Event(event_time, service_time, "arrival")
     gel.append(first_Event)
-
+    bufferQ = []
     i = 0
     while i < 10000:
         event = gel.pop(0)
@@ -39,48 +40,36 @@ def step(l, m, max):
             next_Arr_time = time + negative_exponential_dist_time_(lam)  # step 2
             service_time = negative_exponential_dist_time_(mu)  # step 3
             new_event = Event(next_Arr_time, service_time, "arrival")
-
             gel.append(new_event)  # step 4
             gel.sort(key = lambda temp: temp.eTime)
 
             # Process the arrival event
             if length == 0:
-                length = length + 1
-                depart_time = time + service_time
-                bufferQ.append(depart_time)
-                depart_event = Event(depart_time, 0, "departure")
-                gel.append(depart_event)
-                ### again sort the gel
-                gel.sort(key = lambda temp: temp.eTime)
                 busy = busy + service_time
+                length = length + 1
+                bufferQ.append(time + service_time)
+                depart_event = Event(time + service_time, 0, "departure")
+                gel.append(depart_event)
+                gel.sort(key = lambda temp: temp.eTime)
             elif maxBuffer == length:
                 drop_count = drop_count + 1
                 #print "dropped"
             elif length - 1 < maxBuffer:
                 length = length + 1
-                last_depart_time = bufferQ[length - 2]
                 service_time = negative_exponential_dist_time_(m)
-                t = service_time + last_depart_time
-                bufferQ.append(t)
+                bufferQ.append(service_time + bufferQ[length - 2])
                 busy = busy + service_time
-                #  print "not dropped"
-                    # NOTE: add the stats update
             total = total + length
-
         # else it's a departure event, so process-service-completion
         else:
             length = length - 1
             bufferQ.pop(0)
             if length > 0:
-                new_dep_time = bufferQ[0]
-                new_dep_event = Event(new_dep_time, service_time, "departure")
-                gel.append(new_dep_event)
+                gel.append(Event(bufferQ[0], service_time, "departure"))
                 gel.sort(key=lambda temp: temp.eTime)
                 total = total + length
-
         i += 1
-
-    # stats go here
+    # stats finalizing
     util = busy/time
     avg = total/time
     return drop_count, avg, util
@@ -92,19 +81,18 @@ def run_simulation():
     print "--------------------------------------------------------------------------"
     for temp in test_list:
         d, a, u = step(temp, 1, 100000)
-        print '{:5}'.format(temp),"         " '{:<10}'.format(a), "         " '{:<13}'.format(u), "         " '{:<10}'.format(d)
-
+        print '{:5}'.format(temp), "         " '{:<10.4}'.format(a), "         " '{:<11.4}'.format(u), "         " '{:<10}'.format(d)
+    print "--------------------------------------------------------------------------"
     test_list = [0.2, 0.4, 0.6, 0.8, 0.9]
     max_list = [1, 20, 50]
     print "\n(For mu = 1 pkt/sec and MAX_BUFFER = 1,20, or 50)"
     print "Lambda   |   Avg. Buffer Length  |        Util.        |   Packets Dropped"
     print "--------------------------------------------------------------------------"
-
     for curr_buffer in max_list:
         print "                     "'{:<20}'.format("Current Buffer size ="), '{:5}'.format(curr_buffer)
         for temp in test_list:
             d, a, u = step(temp, 1, curr_buffer)
-            print '{:5}'.format(temp), "         " '{:<10}'.format(a), "         " '{:<13}'.format(u), "         " '{:<10}'.format(d)
+            print '{:5}'.format(temp), "         " '{:<10.4}'.format(a), "         " '{:<11.4}'.format(u), "         " '{:<10}'.format(d)
 
 
 phase_one = run_simulation()

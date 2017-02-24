@@ -3,3 +3,4 @@ class Event(object):
         self.eTime = eTime
         self.servTime = servTime
         self.eType = eType
+
