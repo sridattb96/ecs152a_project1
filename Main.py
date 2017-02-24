@@ -3,6 +3,14 @@
 # ECS 152A project, phase 1
 # 02/24/2017
 
+# link processor = Server
+# buffer = queue (holds at the most MAX_BUFFER number of elements)
+# server transmits in FIFO style
+
+# packet length (and transmission time) varies
+# transmission time is negative exponentially distributed with rate mu pkt/sec
+
+from Event import Event
 import math
 import random
 
@@ -11,42 +19,20 @@ def negative_exponential_dist_time_(rate):
     result = (-1 / rate) * math.log(1 - u)
     return result
 
-# link processor = Server
-# buffer = queue (holds at the most MAX_BUFFER number of elements)
-# server transmits in FIFO style
-
-# packet length (and transmission time) varies
-# transmission time is negative exponentially distributed with rate mu pkt/sec
-
-class Event(object):
-    def __init__(self, eTime, servTime, eType):
-        self.eTime = eTime
-        self.servTime = servTime
-        self.eType = eType
-
 def step(l, m, max):
-    # both inter-arrival time and transmission time use this
-    # first event set-up
-    # init
     maxBuffer = max
+    drop_count = busy = total = length = time = 0
     lam = l
     mu = m
     gel = []
     bufferQ = []
-    length = 0  # length of number of packets in queue
-    time = 0  # current time
-    MAX_BUFFER = max
     event_time = time + negative_exponential_dist_time_(lam)
     service_time = negative_exponential_dist_time_(mu)
-    event_type = "arrival"
-    first_Event = Event(event_time, service_time, event_type)
+    first_Event = Event(event_time, service_time, "arrival")
     gel.append(first_Event)
-    drop_count = 0
-    busy = 0
-    total = 0
 
     i = 0
-    while i < maxBuffer:
+    while i < 10000:
         event = gel.pop(0)
         if event.eType == "arrival":
             time = event.eTime  # step 1
@@ -67,17 +53,17 @@ def step(l, m, max):
                 ### again sort the gel
                 gel.sort(key = lambda temp: temp.eTime)
                 busy = busy + service_time
-
-            else:
-                if length - 1 < MAX_BUFFER:
-                    last_depart_time = bufferQ[length - 1]
-                    length = length + 1
-                    service_time = negative_exponential_dist_time_(m)
-                    t = service_time + last_depart_time
-                    bufferQ.append(t)
-                    busy = busy + service_time
-                if maxBuffer == length:
-                    drop_count = drop_count + 1
+            elif maxBuffer == length:
+                drop_count = drop_count + 1
+                #print "dropped"
+            elif length - 1 < maxBuffer:
+                length = length + 1
+                last_depart_time = bufferQ[length - 2]
+                service_time = negative_exponential_dist_time_(m)
+                t = service_time + last_depart_time
+                bufferQ.append(t)
+                busy = busy + service_time
+                #  print "not dropped"
                     # NOTE: add the stats update
             total = total + length
 
@@ -91,6 +77,7 @@ def step(l, m, max):
                 gel.append(new_dep_event)
                 gel.sort(key=lambda temp: temp.eTime)
                 total = total + length
+
         i += 1
 
     # stats go here
@@ -100,7 +87,6 @@ def step(l, m, max):
 
 def run_simulation():
     test_list = [0.1, 0.25, 0.4, 0.55, 0.65, 0.80, 0.90]
-
     print "(For mu = 1 pkt/sec and MAX_BUFFER = 100,000 (to model a very large or infinite buffer))"
     print "Lambda   |   Avg. Buffer Length  |        Util.        |   Packets Dropped"
     print "--------------------------------------------------------------------------"
