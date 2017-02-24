@@ -36,7 +36,6 @@ def init(lam, mu, gel):
 
 
 def step(lam, mu, maxbuff):
-
     maxBuffer = maxbuff
     drop_count = busy = total = length = time = 0
     gel = []
@@ -47,13 +46,13 @@ def step(lam, mu, maxbuff):
 
     i = 0
     while i < 10000:
-        event = gel.pop(0) # get the first event
-        
+        event = gel.pop(0)  # get the first event
+
         # process an arrival event
         if event.eType == "arrival":
 
-            # Processing arrival 
-            time = event.eTime # step 1
+            # Processing arrival
+            time = event.eTime  # step 1
             next_Arr_time = time + negative_exponential_dist_time_(lam)  # step 2
             service_time = negative_exponential_dist_time_(mu)  # step 3
             new_event = Event(next_Arr_time, service_time, "arrival")
@@ -67,9 +66,9 @@ def step(lam, mu, maxbuff):
                 depart_event = Event(time + service_time, 0, "departure")
                 gel_insert(depart_event, gel)
 
-            # the buffer is full 
+            # the buffer is full
             elif maxBuffer == length:
-                drop_count = drop_count + 1 # drop packet
+                drop_count = drop_count + 1  # drop packet
 
             # there is space in the buffer for another packet
             elif length - 1 < maxBuffer:
@@ -94,32 +93,35 @@ def step(lam, mu, maxbuff):
         i += 1
 
     # get finishing stats
-    util = busy/time
-    avg = total/time
-    
+    util = busy / time
+    avg = total / time
+
     return drop_count, avg, util
 
+
 def run_simulation():
-    
     test_list = [0.2, 0.4, 0.6, 0.8, 0.9]
     max_list = [1, 20, 50]
     print "\n(For mu = 1 pkt/sec and MAX_BUFFER = 1,20, or 50)"
     print "Lambda   |   Avg. Buffer Length  |        Util.        |   Packets Dropped"
     print "--------------------------------------------------------------------------"
-    
+
     for curr_buffer in max_list:
         print "                     "'{:<20}'.format("Current Buffer size ="), '{:5}'.format(curr_buffer)
         for temp in test_list:
             d, a, u = step(temp, 1, curr_buffer)
-            print '{:5}'.format(temp), "         " '{:<10.4}'.format(a), "         " '{:<11.4}'.format(u), "         " '{:<10}'.format(d)
-    
+            print '{:5}'.format(temp), "         " '{:<10.4}'.format(a), "         " '{:<11.4}'.format(
+                u), "         " '{:<10}'.format(d)
+
     test_list = [0.1, 0.25, 0.4, 0.55, 0.65, 0.80, 0.90]
     print "\n\n(For mu = 1 pkt/sec and MAX_BUFFER = 100,000 (to model a very large or infinite buffer))"
     print "Lambda   |   Avg. Buffer Length  |        Util.        |   Packets Dropped"
     print "--------------------------------------------------------------------------"
-    
+
     for temp in test_list:
         d, a, u = step(temp, 1, 100000)
-        print '{:5}'.format(temp), "         " '{:<10.4}'.format(a), "         " '{:<11.4}'.format(u), "         " '{:<10}'.format(d)
+        print '{:5}'.format(temp), "         " '{:<10.4}'.format(a), "         " '{:<11.4}'.format(
+            u), "         " '{:<10}'.format(d)
+
 
 phase_one = run_simulation()
