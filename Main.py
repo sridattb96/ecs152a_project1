@@ -14,8 +14,6 @@ from Event import Event
 import math
 import random
 
-
-
 def negative_exponential_dist_time_(rate):
     u = random.random()
     result = (-1 / rate) * math.log(1 - u)
@@ -75,14 +73,6 @@ def step(l, m, max):
     return drop_count, avg, util
 
 def run_simulation():
-    test_list = [0.1, 0.25, 0.4, 0.55, 0.65, 0.80, 0.90]
-    print "(For mu = 1 pkt/sec and MAX_BUFFER = 100,000 (to model a very large or infinite buffer))"
-    print "Lambda   |   Avg. Buffer Length  |        Util.        |   Packets Dropped"
-    print "--------------------------------------------------------------------------"
-    for temp in test_list:
-        d, a, u = step(temp, 1, 100000)
-        print '{:5}'.format(temp), "         " '{:<10.4}'.format(a), "         " '{:<11.4}'.format(u), "         " '{:<10}'.format(d)
-    print "--------------------------------------------------------------------------"
     test_list = [0.2, 0.4, 0.6, 0.8, 0.9]
     max_list = [1, 20, 50]
     print "\n(For mu = 1 pkt/sec and MAX_BUFFER = 1,20, or 50)"
@@ -93,6 +83,12 @@ def run_simulation():
         for temp in test_list:
             d, a, u = step(temp, 1, curr_buffer)
             print '{:5}'.format(temp), "         " '{:<10.4}'.format(a), "         " '{:<11.4}'.format(u), "         " '{:<10}'.format(d)
-
+    test_list = [0.1, 0.25, 0.4, 0.55, 0.65, 0.80, 0.90]
+    print "\n\n(For mu = 1 pkt/sec and MAX_BUFFER = 100,000 (to model a very large or infinite buffer))"
+    print "Lambda   |   Avg. Buffer Length  |        Util.        |   Packets Dropped"
+    print "--------------------------------------------------------------------------"
+    for temp in test_list:
+        d, a, u = step(temp, 1, 100000)
+        print '{:5}'.format(temp), "         " '{:<10.4}'.format(a), "         " '{:<11.4}'.format(u), "         " '{:<10}'.format(d)
 
 phase_one = run_simulation()
