@@ -1,122 +1,124 @@
-# Anirudh Jagdish, Sridatt Bhamidipati
-# ECS 152A project, Phase 1
+# Anirudh Jagdish
+# Sridatt Bhamidipati
+# ECS 152A project, phase 1
 # 02/24/2017
 
-import random
 import math
-from event import Event
-
-gel = [] # list of arrival and departure events
-bufferQ = [] # queue of events that will be processed
-length = 0  # length of number of packets in queue
-time = 0  # current time
-drop_count = 0 # number of dropped packets
-MAX_BUFFER = 10
-
-def gel_insert(event):
-    '''
-    Inserts an event into a list and sorts by time
-    '''
-    gel.append(event)
-    gel.sort(key=lambda x: x.eTime)
-
-
-def process_arrival(lam, mu, time):
-    '''
-    Handles process arrival by creating an arrival event and adding to list 
-    '''
-    global length
-
-    next_arrival_time = time + negative_exponential_dist_time_(lam) 
-    service_time = negative_exponential_dist_time_(mu)
-    new_event = Event(next_arrival_time, service_time, "arrival")
-    gel_insert(new_event)
-
-    if length == 0:
-        length += 1
-        depart_time = time + service_time
-        bufferQ.append(depart_time)
-        depart_event = Event(depart_time, 0, "departure") # set service time to 0
-        gel_insert(depart_event)
-    else:
-        if length - 1 < MAX_BUFFER:
-            length += 1
-            lastdeparturetime = bufferQ[length - 2]
-            bufferQ.append(service_time + lastdeparturetime)
-        else:
-            drop_count += 1
-            # NOTE: add the stats update
-
-
-def service_packet(time):
-    global length
-
-    length -= 1
-    bufferQ.pop(0)
-
-    if length > 0:
-        new_dep_time = bufferQ[0] # create new depart event for a time
-        service_time = time + new_dep_time
-        new_dep_event = Event(new_dep_time, service_time, "departure")
-        gel_insert(new_dep_event)
-    else:
-        ### fix this shit pls
-        busy_time = 0
-        ### update your busy time here etc, to calculate the busy time
-
+import random
 
 def negative_exponential_dist_time_(rate):
-    '''
-    Used by both inter-arrival time and transmission time
-    '''
     u = random.random()
-    res = (-1 / rate) * math.log10(1 - u)
-    return res
+    result = (-1 / rate) * math.log(1 - u)
+    return result
 
+# link processor = Server
+# buffer = queue (holds at the most MAX_BUFFER number of elements)
+# server transmits in FIFO style
 
-def init(lam, mu):
-    '''
-    create first event at time 0
-    '''
-    next_arrival_time = negative_exponential_dist_time_(lam) 
+# packet length (and transmission time) varies
+# transmission time is negative exponentially distributed with rate mu pkt/sec
+
+class Event(object):
+    def __init__(self, eTime, servTime, eType):
+        self.eTime = eTime
+        self.servTime = servTime
+        self.eType = eType
+
+def step(l, m, max):
+    # both inter-arrival time and transmission time use this
+    # first event set-up
+    # init
+    maxBuffer = max
+    lam = l
+    mu = m
+    gel = []
+    bufferQ = []
+    length = 0  # length of number of packets in queue
+    time = 0  # current time
+    MAX_BUFFER = max
+    event_time = time + negative_exponential_dist_time_(lam)
     service_time = negative_exponential_dist_time_(mu)
-    new_event = Event(next_arrival_time, service_time, "arrival")
-    gel_insert(new_event)
-
-
-def simulation(lam, mu):
-    '''
-    Simulates a Network Protocol and a Queue/Server system using negative 
-    exponential distribution time as arrival and departure times for each
-    packet
-    '''
-
-    sumQueueLength = 0
-
-    init(lam, mu)
+    event_type = "arrival"
+    first_Event = Event(event_time, service_time, event_type)
+    gel.append(first_Event)
+    drop_count = 0
+    busy = 0
+    total = 0
 
     i = 0
-    while i < MAX_BUFFER:
-        sumQueueLength += length
+    while i < maxBuffer:
+        event = gel.pop(0)
+        if event.eType == "arrival":
+            time = event.eTime  # step 1
+            next_Arr_time = time + negative_exponential_dist_time_(lam)  # step 2
+            service_time = negative_exponential_dist_time_(mu)  # step 3
+            new_event = Event(next_Arr_time, service_time, "arrival")
 
-        event = gel.pop(0) # get first event
-        time = event.eTime
+            gel.append(new_event)  # step 4
+            gel.sort(key = lambda temp: temp.eTime)
 
-        if event.eType == "arrival": # if event type is arrival
-            process_arrival(lam, mu, time)
+            # Process the arrival event
+            if length == 0:
+                length = length + 1
+                depart_time = time + service_time
+                bufferQ.append(depart_time)
+                depart_event = Event(depart_time, 0, "departure")
+                gel.append(depart_event)
+                ### again sort the gel
+                gel.sort(key = lambda temp: temp.eTime)
+                busy = busy + service_time
 
-        elif event.eType == "departure":
-            service_packet(time)
+            else:
+                if length - 1 < MAX_BUFFER:
+                    last_depart_time = bufferQ[length - 1]
+                    length = length + 1
+                    service_time = negative_exponential_dist_time_(m)
+                    t = service_time + last_depart_time
+                    bufferQ.append(t)
+                    busy = busy + service_time
+                if maxBuffer == length:
+                    drop_count = drop_count + 1
+                    # NOTE: add the stats update
+            total = total + length
 
+        # else it's a departure event, so process-service-completion
+        else:
+            length = length - 1
+            bufferQ.pop(0)
+            if length > 0:
+                new_dep_time = bufferQ[0]
+                new_dep_event = Event(new_dep_time, service_time, "departure")
+                gel.append(new_dep_event)
+                gel.sort(key=lambda temp: temp.eTime)
+                total = total + length
         i += 1
 
+    # stats go here
+    util = busy/time
+    avg = total/time
+    return drop_count, avg, util
 
-    print(drop_count)
-    print(sumQueueLength/MAX_BUFFER)
+def run_simulation():
+    test_list = [0.1, 0.25, 0.4, 0.55, 0.65, 0.80, 0.90]
+
+    print "(For mu = 1 pkt/sec and MAX_BUFFER = 100,000 (to model a very large or infinite buffer))"
+    print "Lambda   |   Avg. Buffer Length  |        Util.        |   Packets Dropped"
+    print "--------------------------------------------------------------------------"
+    for temp in test_list:
+        d, a, u = step(temp, 1, 100000)
+        print '{:5}'.format(temp),"         " '{:<10}'.format(a), "         " '{:<13}'.format(u), "         " '{:<10}'.format(d)
+
+    test_list = [0.2, 0.4, 0.6, 0.8, 0.9]
+    max_list = [1, 20, 50]
+    print "\n(For mu = 1 pkt/sec and MAX_BUFFER = 1,20, or 50)"
+    print "Lambda   |   Avg. Buffer Length  |        Util.        |   Packets Dropped"
+    print "--------------------------------------------------------------------------"
+
+    for curr_buffer in max_list:
+        print "                     "'{:<20}'.format("Current Buffer size ="), '{:5}'.format(curr_buffer)
+        for temp in test_list:
+            d, a, u = step(temp, 1, curr_buffer)
+            print '{:5}'.format(temp), "         " '{:<10}'.format(a), "         " '{:<13}'.format(u), "         " '{:<10}'.format(d)
 
 
-def main():
-
-    simulation(1, 0.1)
-
-main()
+phase_one = run_simulation()
